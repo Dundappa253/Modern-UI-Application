@@ -1,0 +1,494 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Record Browser with List Loading</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        body {
+            overflow: hidden;
+            background: #f5f7fa;
+        }
+
+        /* Main grid container */
+        .app-container {
+            display: grid;
+            grid-template-columns: 300px 1fr;
+            grid-template-rows: 60px 1fr 40px;
+            min-height: 100vh;
+            max-width: 1200px;
+            margin: 0 auto;
+            box-shadow: 0 0 20px rgba(0,0,0,0.1);
+        }
+
+        /* Header spanning both columns */
+        .header {
+            grid-column: 1 / -1;
+            background: #2c3e50;
+            color: white;
+            padding: 0 20px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            border-bottom: 1px solid #1a2a3a;
+        }
+
+        .header h1 {
+            font-size: 1.2rem;
+            font-weight: 500;
+        }
+
+        /* Records list styling */
+        .records-list {
+            background: white;
+            border-right: 1px solid #e1e5eb;
+            overflow-y: auto;
+            position: relative;
+        }
+
+        .list-header {
+            padding: 15px;
+            background: #f8fafc;
+            border-bottom: 1px solid #e1e5eb;
+            font-weight: 600;
+            color: #4a5568;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        /* List-specific skeleton loading */
+        .list-skeleton {
+            padding: 15px;
+        }
+
+        .list-skeleton-row {
+            display: flex;
+            margin-bottom: 12px;
+            align-items: center;
+        }
+
+        .list-skeleton-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 4px;
+            background: #edf2f7;
+            margin-right: 12px;
+            flex-shrink: 0;
+        }
+
+        .list-skeleton-content {
+            flex-grow: 1;
+        }
+
+        .list-skeleton-line {
+            height: 12px;
+            background: #edf2f7;
+            border-radius: 4px;
+            margin-bottom: 6px;
+        }
+
+        .list-skeleton-line.short {
+            width: 70%;
+        }
+
+        .list-skeleton-line.medium {
+            width: 85%;
+        }
+
+        /* Record items */
+        .record-item {
+            padding: 15px;
+            border-bottom: 1px solid #f1f5f9;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+        }
+
+        .record-item:hover {
+            background: #f8fafc;
+        }
+
+        .record-item.active {
+            background: #ebf8ff;
+            border-left: 3px solid #3182ce;
+        }
+
+        .record-avatar {
+            width: 40px;
+            height: 40px;
+            background: #3182ce;
+            border-radius: 4px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+            margin-right: 12px;
+            flex-shrink: 0;
+        }
+
+        .record-content h3 {
+            font-size: 0.95rem;
+            color: #2d3748;
+            margin-bottom: 4px;
+        }
+
+        .record-content p {
+            font-size: 0.8rem;
+            color: #718096;
+            margin-bottom: 4px;
+        }
+
+        .record-content small {
+            font-size: 0.75rem;
+            color: #a0aec0;
+        }
+
+        /* Detail panel styling */
+        .record-detail {
+            background: white;
+            overflow-y: auto;
+            position: relative;
+        }
+
+        .detail-header {
+            padding: 20px;
+            border-bottom: 1px solid #e1e5eb;
+            background: #f8fafc;
+        }
+
+        .detail-content {
+            padding: 20px;
+        }
+
+        /* Footer spanning both columns */
+        .footer {
+            grid-column: 1 / -1;
+            background: #2c3e50;
+            color: #a0aec0;
+            padding: 0 20px;
+            font-size: 0.75rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        /* Loading states */
+        .loading-spinner {
+            width: 24px;
+            height: 24px;
+            border: 3px solid rgba(255,255,255,0.3);
+            border-top: 3px solid white;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .detail-loading {
+            padding: 40px;
+            text-align: center;
+            color: #718096;
+        }
+
+        .detail-loading .loading-spinner {
+            margin: 0 auto 15px;
+            border-color: rgba(49, 130, 206, 0.3);
+            border-top-color: #3182ce;
+        }
+
+        /* Status messages */
+        .status-message {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.85rem;
+            color: #718096;
+        }
+
+        /* Buttons */
+        .btn {
+            padding: 6px 12px;
+            background: #3182ce;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.8rem;
+            transition: all 0.2s;
+        }
+
+        .btn:hover {
+            background: #2c5282;
+        }
+
+        .btn-outline {
+            background: transparent;
+            border: 1px solid #3182ce;
+            color: #3182ce;
+        }
+
+        .btn-outline:hover {
+            background: #ebf8ff;
+        }
+
+        /* Responsive design */
+        @media (max-width: 768px) {
+            .app-container {
+                grid-template-columns: 100%;
+                grid-template-rows: 60px auto 1fr 40px;
+            }
+            .records-list {
+                grid-row: 2;
+                border-right: none;
+                border-bottom: 1px solid #e1e5eb;
+                max-height: 300px;
+            }
+            .record-detail {
+                grid-row: 3;
+            }
+        }
+    </style>
+</head>
+<body>
+<div class="app-container">
+    <header class="header">
+        <h1>Record Management System</h1>
+        <div class="status-message" id="statusHeader">
+            <div class="loading-spinner"></div>
+            <span>Loading application...</span>
+        </div>
+    </header>
+
+    <div class="records-list" id="recordsList">
+        <div class="list-header">
+            <span>All Records</span>
+            <button class="btn-outline" id="refreshBtn">Refresh</button>
+        </div>
+        <div class="list-skeleton" id="listSkeleton">
+            <!-- Skeleton rows will be added by JavaScript -->
+        </div>
+        <!-- Record items will be loaded here -->
+    </div>
+
+    <div class="record-detail" id="recordDetail">
+        <div class="detail-header">
+            <h2>Record Details</h2>
+        </div>
+        <div class="detail-loading" id="detailLoading">
+            <div class="loading-spinner"></div>
+            <p>Select a record to view details</p>
+        </div>
+        <!-- Detail content will be loaded here -->
+    </div>
+
+    <footer class="footer">
+        <span>© 2023 Record System</span>
+        <span id="recordCount">0 records</span>
+    </footer>
+</div>
+
+<script>
+    // Sample data
+    let records = [
+        { id: 1, title: "Quarterly Financial Report", date: "2023-10-15", summary: "Q3 results showing 12% growth", type: "Finance" },
+        { id: 2, title: "Product Roadmap", date: "2023-11-02", summary: "Next year's planned features", type: "Product" },
+        { id: 3, title: "Customer Feedback", date: "2023-09-28", summary: "User survey results analysis", type: "Research" },
+        { id: 4, title: "Marketing Results", date: "2023-10-30", summary: "Fall campaign performance", type: "Marketing" },
+        { id: 5, title: "HR Policy Updates", date: "2023-11-10", summary: "Revised remote work policies", type: "HR" },
+        { id: 6, title: "IT Infrastructure", date: "2023-11-05", summary: "Server upgrade schedule", type: "IT" },
+        { id: 7, title: "Sales Targets", date: "2023-11-12", summary: "Q4 sales projections", type: "Sales" }
+    ];
+
+    // DOM elements
+    const recordsList = document.getElementById('recordsList');
+    const listSkeleton = document.getElementById('listSkeleton');
+    const recordDetail = document.getElementById('recordDetail');
+    const detailLoading = document.getElementById('detailLoading');
+    const statusHeader = document.getElementById('statusHeader');
+    const refreshBtn = document.getElementById('refreshBtn');
+    const recordCount = document.getElementById('recordCount');
+
+    // Generate skeleton rows
+    function createSkeletonRows(count) {
+        listSkeleton.innerHTML = '';
+        for (let i = 0; i < count; i++) {
+            const row = document.createElement('div');
+            row.className = 'list-skeleton-row';
+            row.innerHTML = `
+                <div class="list-skeleton-avatar"></div>
+                <div class="list-skeleton-content">
+                    <div class="list-skeleton-line medium"></div>
+                    <div class="list-skeleton-line short"></div>
+                </div>
+            `;
+            listSkeleton.appendChild(row);
+        }
+    }
+
+    // Initial load
+    createSkeletonRows(5);
+    setTimeout(loadData, 1500);
+
+    // Refresh button handler
+    refreshBtn.addEventListener('click', () => {
+        statusHeader.innerHTML = '<div class="loading-spinner"></div><span>Refreshing data...</span>';
+        createSkeletonRows(5);
+        loadData();
+    });
+
+    function loadData() {
+        // Simulate API delay
+        setTimeout(() => {
+            // Load records
+            loadRecords();
+
+            // Update status
+            statusHeader.innerHTML = `<span>Ready</span>`;
+            recordCount.textContent = `${records.length} records`;
+
+            // Show notification
+            showNotification('Data loaded successfully');
+        }, 1500);
+    }
+
+    function loadRecords() {
+        // Clear skeleton
+        listSkeleton.style.display = 'none';
+
+        // Add real records
+        recordsList.innerHTML = `
+            <div class="list-header">
+                <span>All Records</span>
+                <button class="btn-outline" id="refreshBtn">Refresh</button>
+            </div>
+        `;
+
+        records.forEach(record => {
+            const recordEl = document.createElement('div');
+            recordEl.className = 'record-item';
+            recordEl.innerHTML = `
+                <div class="record-avatar">${record.type.charAt(0)}</div>
+                <div class="record-content">
+                    <h3>${record.title}</h3>
+                    <p>${record.summary}</p>
+                    <small>${record.date}</small>
+                </div>
+            `;
+
+            // Add click handler
+            recordEl.addEventListener('click', () => showRecordDetail(record));
+            recordsList.appendChild(recordEl);
+        });
+
+        // Reattach refresh button handler
+        document.getElementById('refreshBtn').addEventListener('click', () => {
+            statusHeader.innerHTML = '<div class="loading-spinner"></div><span>Refreshing data...</span>';
+            listSkeleton.style.display = 'block';
+            loadData();
+        });
+    }
+
+    function showRecordDetail(record) {
+        // Show loading state
+        detailLoading.style.display = 'flex';
+        recordDetail.innerHTML = `
+            <div class="detail-header">
+                <h2>Record Details</h2>
+            </div>
+            <div class="detail-loading" id="detailLoading">
+                <div class="loading-spinner"></div>
+                <p>Loading ${record.title}...</p>
+            </div>
+        `;
+
+        // Simulate API delay
+        setTimeout(() => {
+            // Show actual content
+            recordDetail.innerHTML = `
+                <div class="detail-header">
+                    <h2>${record.title}</h2>
+                </div>
+                <div class="detail-content">
+                    <div style="display: flex; align-items: center; gap: 15px; margin-bottom: 20px;">
+                        <div style="width: 60px; height: 60px; background: #3182ce; border-radius: 6px; display: flex; align-items: center; justify-content: center; color: white; font-size: 1.5rem; font-weight: bold;">
+                            ${record.type.charAt(0)}
+                        </div>
+                        <div>
+                            <h3 style="margin: 0 0 5px 0;">${record.type} Document</h3>
+                            <div style="font-size: 0.9rem; color: #718096;">
+                                <span style="margin-right: 15px;">ID: ${record.id}</span>
+                                <span>Created: ${record.date}</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div style="background: #f8fafc; padding: 15px; border-radius: 6px; margin-bottom: 20px;">
+                        <h4 style="margin-top: 0;">Summary</h4>
+                        <p>${record.summary}</p>
+                    </div>
+
+                    <div>
+                        <h4>Full Content</h4>
+                        <p>This is the complete detail view for <strong>${record.title}</strong>.</p>
+                        <p>Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nullam auctor, nisl eget ultricies tincidunt, nisl nisl aliquam nisl, eget ultricies nisl nisl eget nisl.</p>
+                        <p>Additional details would appear here in a real application, including:</p>
+                        <ul>
+                            <li>Detailed description</li>
+                            <li>Related documents</li>
+                            <li>Activity history</li>
+                            <li>Comments and annotations</li>
+                        </ul>
+                    </div>
+                </div>
+            `;
+
+            // Update active state in list
+            document.querySelectorAll('.record-item').forEach(item => {
+                item.classList.remove('active');
+            });
+            event.currentTarget.classList.add('active');
+        }, 1000);
+    }
+
+    function showNotification(message) {
+        const notification = document.createElement('div');
+        notification.className = 'list-header';
+        notification.style.background = '#ebf8ff';
+        notification.style.color = '#3182ce';
+        notification.style.animation = 'fadeIn 0.3s';
+        notification.innerHTML = `
+            <span>${message}</span>
+            <small>${new Date().toLocaleTimeString()}</small>
+        `;
+        recordsList.insertBefore(notification, recordsList.firstChild.nextSibling);
+
+        setTimeout(() => {
+            notification.style.opacity = '0';
+            setTimeout(() => notification.remove(), 300);
+        }, 2000);
+    }
+
+    // Responsive design indicator
+    window.addEventListener('resize', () => {
+        if (window.innerWidth < 768) {
+            statusHeader.innerHTML = '<span>Mobile View</span>';
+        } else {
+            statusHeader.innerHTML = '<span>Desktop View</span>';
+        }
+    });
+</script>
+</body>
+</html>
