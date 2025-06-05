@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Copy UI with Right-Aligned Copied Text</title>
+    <style>
+        body {
+          font-family: 'Segoe UI', sans-serif;
+          background: #f5f6fa;
+          padding: 50px;
+          display: flex;
+          justify-content: center;
+        }
+
+        .copy-card {
+          background: #fff;
+          padding: 20px;
+          border-radius: 12px;
+          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+          width: 400px;
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          position: relative;
+        }
+
+        .copy-text {
+          font-size: 16px;
+          color: #333;
+          word-break: break-word;
+          flex: 1;
+          padding-right: 10px;
+        }
+
+        .copy-actions {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+        }
+
+        .copy-btn {
+          background: none;
+          border: none;
+          cursor: pointer;
+          padding: 4px;
+        }
+
+        .copy-icon {
+          width: 20px;
+          height: 20px;
+          fill: #555;
+          transition: fill 0.2s;
+        }
+
+        .copy-btn:hover .copy-icon {
+          fill: #007bff;
+        }
+
+        .copied-popup {
+          font-size: 13px;
+          color: green;
+          display: none;
+          min-width: 60px;
+        }
+    </style>
+</head>
+<body>
+
+<div class="copy-card">
+    <div class="copy-text" id="copyContent">
+        https://example.com/share/invite?code=abc123
+    </div>
+    <div class="copy-actions">
+        <button class="copy-btn" onclick="copyCardText()">
+            <svg class="copy-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+                <path d="M16 1H4a2 2 0 0 0-2 2v14h2V3h12V1z"/>
+                <path d="M20 5H8a2 2 0 0 0-2 2v16h16V7a2 2 0 0 0-2-2zm0 18H8V7h12v16z"/>
+            </svg>
+        </button>
+        <span id="copiedMsg" class="copied-popup">Copied!</span>
+    </div>
+</div>
+
+<script>
+    function copyCardText() {
+      const textToCopy = document.getElementById("copyContent").innerText;
+      const copiedMsg = document.getElementById("copiedMsg");
+
+      navigator.clipboard.writeText(textToCopy).then(() => {
+        copiedMsg.style.display = "inline";
+        setTimeout(() => copiedMsg.style.display = "none", 1500);
+      });
+    }
+</script>
+
+</body>
+</html>
